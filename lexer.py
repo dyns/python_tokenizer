@@ -6,44 +6,34 @@
 import fileinput
 import re
 
+# These need to match from start to end ^(keyword)$
 keywords = {'False', 'None', 'True', 'and', 'as', 'assert', 'break', 'class', 'continue', 'def',
                'del', 'elif', 'else', 'except', 'finally', 'for', 'from', 'global', 'if', 'import',
                'in', 'is', 'lambda', 'nonlocal', 'not', 'or', 'pass', 'raise', 'return', 'try', 'while',
                'with', 'yield'}
 
+#These can match without spacing: 1+2 = 3 
 operators = {'\+', '-', '\*', '\*\*', '/', '//', '%', '@', '<<', '>>', '&', '\|', '\^', '~', '<', '>', '<=', '>=', '==', '!='}
 
 delimiters = {'\)', '\(', '\[', '\]', '\{', '\}', ',', ':', '\.', ';', '=', '->', '\+=', '-=', '\*=', '/=', '//=',
               '%=', '@=', '&=', '\|=', '\^=', '>>=', '<<=', '\*\*='}
 
-keywords = keywords.union(operators, delimiters)
+#total_regs = '^(\.\.\.)|' + ('|'.join(keywords)) + '|^ +' + '|^(\r\n?|\n)' + '|^[a-zA-Z]*'
 
-keywords = {'^(' + word + ')' for word in keywords}
+#regs = '|'.join(['^('+word+')$' for word in keywords.union(operators, delimiters)]) + '|^[0-9]'
+#regs = re.compile(regs)
 
-#total_regs = '^\(|^\)|^("|\').*("|\')|^:|^\.|^ |^[a-zA-Z]+$|' + '|'.join(keywords)
+#print(regs)
 
-total_regs = '^(\.\.\.)|' + ('|'.join(keywords)) + '|^ +' + '|^(\r\n?|\n)' + '|^[a-zA-Z]*'
-
-#for (i, l) in enumerate(total_regs):
-#    print(str(i) + ' ' + l)
-
-regs = re.compile(total_regs)
-
-# for each line, parse it into tokens and print
-def parseLine(line):
-    if not line:
-        print('empty line')
-        return
-    matches = list(re.finditer(regs, line))
-    if not matches:
-        print('empty matches list')
-        return
-    match = matches[0].group()
-    print('\nmatch: \'' + str(matches[0]) + '\'')
-    line = line[len(match):]
-    print('rest of line: \'' + line + '\'\n')
-    parseLine(line)
+def tokenize(line):
+	for mo in re.finditer('|'.join(['(' + word +')' for word  in operators.union(delimiters)]), line):
+		print(mo.group())
 
 for line in fileinput.input():
-	parseLine(line)
+	tokenize(line)
+
+
+
+
+
 
