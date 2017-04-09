@@ -13,27 +13,29 @@ keywords = {'False', 'None', 'True', 'and', 'as', 'assert', 'break', 'class', 'c
                'with', 'yield'}
 
 #These can match without spacing: 1+2 = 3 
-operators = {'\+', '-', '\*', '\*\*', '/', '//', '%', '@', '<<', '>>', '&', '\|', '\^', '~', '<', '>', '<=', '>=', '==', '!='}
+operators = {'\+', '\-', '\*', '\*\*', '/', '//', '%', '@', '<<', '>>', '&', '\|', '\^', '~', '<', '>', '<=', '>=', '==', '!='}
 
-delimiters = {'\)', '\(', '\[', '\]', '\{', '\}', ',', ':', '\.', ';', '=', '->', '\+=', '-=', '\*=', '/=', '//=',
+delimiters = {'\)', '\(', '\[', '\]', '\{', '\}', ',', ':', '\.', '\.\.\.', ';', '=', '->', '\+=', '-=', '\*=', '/=', '//=',
               '%=', '@=', '&=', '\|=', '\^=', '>>=', '<<=', '\*\*='}
 
-#total_regs = '^(\.\.\.)|' + ('|'.join(keywords)) + '|^ +' + '|^(\r\n?|\n)' + '|^[a-zA-Z]*'
+token_types = [
+('NEWLINE', r'\n'),
+('ID', r'[a-zA-Z_][a-zA-Z0-9_]*'),
+('INDENT', r'\t'),
+('NUMBER', r'\d+(\.\d*)?'),
+('OPEN_STRING', r'\'[^\']*\n'),
+('STRING', r'\'[^\']*\''),
+('PUNCT', r'|'.join(wrd for wrd in delimiters.union(operators)))
+]
 
-#regs = '|'.join(['^('+word+')$' for word in keywords.union(operators, delimiters)]) + '|^[0-9]'
-#regs = re.compile(regs)
-
-#print(regs)
+tok_regex = '|'.join('(?P<%s>%s)' % pair for pair in token_types)
 
 def tokenize(line):
-	for mo in re.finditer('|'.join(['(' + word +')' for word  in operators.union(delimiters)]), line):
-		print(mo.group())
+	for mo in re.finditer(tok_regex, line):
+		yield str(mo.lastgroup) + ' ' + str(mo.group())
 
+tokens = []
 for line in fileinput.input():
-	tokenize(line)
-
-
-
-
-
-
+	tokens.extend(tokenize(line))
+else:
+	print( '\n'.join(tokens) )
