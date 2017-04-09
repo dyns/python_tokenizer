@@ -21,11 +21,14 @@ delimiters = {'\)', '\(', '\[', '\]', '\{', '\}', ',', ':', '\.', '\.\.\.', ';',
 token_types = [
 ('NEWLINE', r'\n'),
 ('ID', r'[a-zA-Z_][a-zA-Z0-9_]*'),
-('INDENT', r'\t'),
+('INDENT', r'\t|    '),
 ('NUMBER', r'\d+(\.\d*)?'),
 ('OPEN_STRING', r'\'[^\']*\n'),
 ('STRING', r'\'[^\']*\''),
-('PUNCT', r'|'.join(wrd for wrd in delimiters.union(operators)))
+('COMMENT', r'#.*\n'),
+('PUNCT', r'|'.join(wrd for wrd in delimiters.union(operators))),
+('LINE_CONTINUE', r'\\'),
+('SPACE', r' ')
 ]
 
 tok_regex = '|'.join('(?P<%s>%s)' % pair for pair in token_types)
@@ -36,10 +39,37 @@ def tokenize(line):
 		match = mo.group(group)
 		if group == 'ID' and match in keywords:
 			group = 'KEYWORD'
-		yield group + ' ' + match
+		yield (group, match)
 
 tokens = []
+out = []
+
+stack = []
+def filterToken(match):
+	global stack
+	tokenType = match[0]
+	if tokenType == 'COMMENT':
+		return
+	if stack and stack[-1] == 'NEWLINE':
+		raise ValueError('')
+		return
+	if tokenType == 'SPACE':
+		return
+	if tokenType == 'NEWLINE':
+		if not stack or stack[-1] == 'NEWLINE':
+			return
+		else:
+			stack = []	
+	if tokenType == 'LINE_CONTINUE' and not (stack and stack[-1] != 'OPEN_STRING'):
+		return
+	out.append(str(match))
+
 for line in fileinput.input():
-	tokens.extend(tokenize(line))
+	for match in tokenize(line):
+		tokens.append(match)
+		filterToken(match)
 else:
-	print( '\n'.join(tokens) )
+	#print( '\n'.join(tokens) )	
+	print( '\n'.join(out) )
+
+
