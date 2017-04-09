@@ -13,7 +13,7 @@ keywords = {'False', 'None', 'True', 'and', 'as', 'assert', 'break', 'class', 'c
                'with', 'yield'}
 
 #These can match without spacing: 1+2 = 3 
-operators = {'\+', '\-', '\*', '\*\*', '/', '//', '%', '@', '<<', '>>', '&', '\|', '\^', '~', '<', '>', '<=', '>=', '==', '!='}
+operators = {'\+', '\-', '\*', '\*\*', '/', '//', '%', '@', '<<', '>>', '&', '\|', '\^', '~', '<(?!=|<)', '>', '<=', '>=', '==', '!='}
 
 delimiters = {'\)', '\(', '\[', '\]', '\{', '\}', ',', ':', '\.', '\.\.\.', ';', '=', '->', '\+=', '-=', '\*=', '/=', '//=',
               '%=', '@=', '&=', '\|=', '\^=', '>>=', '<<=', '\*\*='}
@@ -32,7 +32,11 @@ tok_regex = '|'.join('(?P<%s>%s)' % pair for pair in token_types)
 
 def tokenize(line):
 	for mo in re.finditer(tok_regex, line):
-		yield str(mo.lastgroup) + ' ' + str(mo.group())
+		group = mo.lastgroup
+		match = mo.group(group)
+		if group == 'ID' and match in keywords:
+			group = 'KEYWORD'
+		yield group + ' ' + match
 
 tokens = []
 for line in fileinput.input():
