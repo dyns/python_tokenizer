@@ -15,7 +15,7 @@ keywords = {'False', 'None', 'True', 'and', 'as', 'assert', 'break', 'class', 'c
 #These can match without spacing: 1+2 = 3 
 operators = {'\+', '\-', '\*', '\*\*', '/', '//', '%', '@', '<<', '>>', '&', '\|', '\^', '~', '<(?!=|<)', '>', '<=', '>=', '==', '!='}
 
-delimiters = {'\)', '\(', '\[', '\]', '\{', '\}', ',', ':', '\.', '\.\.\.', ';', '=', '->', '\+=', '-=', '\*=', '/=', '//=',
+delimiters = {'\)', '\(', '\[', '\]', '\{', '\}', ',', ':', '\.', '\.\.\.', ';', '=(?!=)', '->', '\+=', '-=', '\*=', '/=', '//=',
               '%=', '@=', '&=', '\|=', '\^=', '>>=', '<<=', '\*\*='}
 
 token_types = [
@@ -34,42 +34,65 @@ token_types = [
 tok_regex = '|'.join('(?P<%s>%s)' % pair for pair in token_types)
 
 def tokenize(line):
-	for mo in re.finditer(tok_regex, line):
-		group = mo.lastgroup
-		match = mo.group(group)
-		if group == 'ID' and match in keywords:
-			group = 'KEYWORD'
-		yield (group, match)
+    for mo in re.finditer(tok_regex, line):
+        group = mo.lastgroup
+        match = mo.group(group)
+        if group == 'ID' and match in keywords:
+            group = 'KEYWORD'
+        yield (group, match)
 
 tokens = []
 out = []
-
+pastIndent = None
 stack = []
 def filterToken(match):
-	global stack
-	tokenType = match[0]
-	if tokenType == 'COMMENT':
-		return
-	if stack and stack[-1] == 'NEWLINE':
-		raise ValueError('')
-		return
-	if tokenType == 'SPACE':
-		return
-	if tokenType == 'NEWLINE':
-		if not stack or stack[-1] == 'NEWLINE':
-			return
-		else:
-			stack = []	
-	if tokenType == 'LINE_CONTINUE' and not (stack and stack[-1] != 'OPEN_STRING'):
-		return
-	out.append(str(match))
+    global stack, pastIndent
+    tokenType = match[0]
+    if tokenType == 'COMMENT':
+        return
+    if stack and stack[-1] == 'NEWLINE':
+        raise ValueError('')
+        return
+    if tokenType == 'SPACE':
+        if not stack or stack[-1] == 'SPACE':
+            stack.append('SPACE')
+        return
+    else:
+        # not a space, check if there are spaces on stack, if so, pop them and emit indent tokens
+        spaces = stack and stack[-1] == 'SPACE'
+        if spaces or not stack:
+            if pastIndent is None:
+                pastIndent = len(stack)
+            elif len(stack) > pastIndent:
+                out.append('INDENT')
+                pastIndent = len(stack)
+            elif len(stack) < pastIndent:
+                out.append('DEDENT')
+                pastIndent = len(stack)
+            stack = []
+                
+    if tokenType == 'NEWLINE':
+        if stack and (stack[-1] == 'LINE_CONTINUE'):
+            stack.pop()
+            return
+        if not stack:
+            return
+        else:
+            stack = []
+            out.append(str(match))
+            return
+    if tokenType == 'LINE_CONTINUE':
+        stack.append('LINE_CONTINUE')
+        return
+    stack.append(str(tokenType))
+    out.append(str(match))
 
 for line in fileinput.input():
-	for match in tokenize(line):
-		tokens.append(match)
-		filterToken(match)
+    for match in tokenize(line):
+        tokens.append(match)
+        filterToken(match)
 else:
-	#print( '\n'.join(tokens) )	
-	print( '\n'.join(out) )
+    #print( '\n'.join(tokens) ) 
+    print( '\n'.join(out) )
 
 
