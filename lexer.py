@@ -21,7 +21,6 @@ delimiters = {'\)', '\(', '\[', '\]', '\{', '\}', ',', ':', '\.', '\.\.\.', ';',
 token_types = [
 ('NEWLINE', r'\n'),
 ('ID', r'[a-zA-Z_][a-zA-Z0-9_]*'),
-('INDENT', r'\t|    '),
 ('NUMBER', r'\d+(\.\d*)?'),
 ('OPEN_STRING', r'\'[^\']*\n'),
 ('STRING', r'\'[^\']*\''),
@@ -60,19 +59,21 @@ def filterToken(match):
     else:
         # not a space, check if there are spaces on stack, if so, pop them and emit indent tokens
         spaces = stack and stack[-1] == 'SPACE'
-        if spaces or not stack:
+        if (spaces or not stack) and tokenType != 'NEWLINE':
             if pastIndent is None:
                 pastIndent = len(stack)
             elif len(stack) > pastIndent:
-                out.append('INDENT')
+                out.append('(INDENT)')
                 pastIndent = len(stack)
             elif len(stack) < pastIndent:
-                out.append('DEDENT')
+                out.append('(DEDENT)')
                 pastIndent = len(stack)
             stack = []
-                
+            #print('token: {0} of token type: {1} with space at: {2}'.format(repr(match[1]), str(tokenType),  pastIndent))
     if tokenType == 'NEWLINE':
-        if stack and (stack[-1] == 'LINE_CONTINUE'):
+        if stack and stack[-1] == 'SPACE':
+            stack = []
+        if stack and (stack[-1] == 'LINE_CONTINUE' or stack[-1] == '['):
             stack.pop()
             return
         if not stack:
